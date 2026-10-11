@@ -1,0 +1,38 @@
+@model PublicModel
+@inject PortfolioService Service
+@{ ViewData["Title"] = "Full Stack Software Engineer"; var featured = await Service.OrderedProjects(true, true, Context.RequestAborted); }
+@foreach (var block in Model.Sections)
+{
+    if (block.Key == "hero")
+    {
+        <section class="hero wrap" id="hero">
+            <div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> @block.Subtitle</p><h1 class="preserve">@block.Title</h1><p class="hero-description">@block.Content</p><div class="actions"><a class="button primary" href="@block.Configuration.ButtonUrl">@block.Configuration.ButtonLabel <span aria-hidden="true">↗</span></a><a class="text-link" href="/about">A little about me <span aria-hidden="true">→</span></a></div><div class="hero-note"><span class="small-cross">+</span> CRAFTED WITH CARE. ENGINEERED TO LAST.</div></div>
+            <div class="system-art" aria-label="Abstract illustration of connected frontend, API and data layers"><div class="art-grid"></div><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="core"><span class="code-symbol">&lt;/&gt;</span><span>FULL STACK</span></div><div class="node node-front"><span>01 / INTERFACE</span><strong>React + TypeScript</strong></div><div class="node node-api"><span>02 / LOGIC</span><strong>C# + ASP.NET Core</strong></div><div class="node node-data"><span>03 / DATA</span><strong>SQL + MongoDB</strong></div><div class="art-caption"><span class="status-dot"></span> SYSTEMS THINKING, END TO END</div></div>
+        </section>
+    }
+    else if (block.Key == "about")
+    {
+        <section class="wrap section about-strip" id="about"><p class="eyebrow">01 / THE APPROACH</p><div class="split"><h2>@block.Title</h2><div><p>@block.Content</p><a class="text-link" href="/about">More about my approach ↗</a></div></div></section>
+    }
+    else if (block.Key == "projects")
+    {
+        <section class="wrap section" id="projects"><div class="section-heading"><div><p class="eyebrow">02 / SELECTED WORK</p><h2>@block.Title<span class="blue">.</span></h2></div><a class="text-link" href="/projects">Explore all projects ↗</a></div><p class="section-intro">@block.Content</p><div class="project-grid">@foreach (var project in featured.Take(block.Configuration.ItemLimit)) { <partial name="_ProjectCard" model="new CaseStudyModel(project, Model.Media, false)" /> }</div>@if (!featured.Any()) { <p class="empty">Selected work is being prepared. Check back soon.</p> }</section>
+    }
+    else if (block.Key == "skills")
+    {
+        <section class="section skills-section" id="skills"><div class="wrap"><div class="split"><div><p class="eyebrow">03 / THE TOOLKIT</p><h2 class="preserve">@block.Title</h2><p>@block.Content</p></div><div class="skill-grid">@foreach (var skill in Model.Content.Where(x => x.Kind == "skills").Take(block.Configuration.ItemLimit)) { <div class="skill"><span class="blue" aria-hidden="true">⌘</span><p class="eyebrow">@skill.Subtitle</p><h3>@skill.Title</h3><p>@skill.Content</p></div> }</div></div></div></section>
+    }
+    else if (block.Key == "experience")
+    {
+        <section class="wrap section" id="experience"><p class="eyebrow">04 / THE JOURNEY</p><h2>@block.Title</h2><p>@block.Content</p><div class="timeline">@foreach (var item in Model.Content.Where(x => x.Kind == "experience").Take(block.Configuration.ItemLimit)) { <article><span class="eyebrow">@(item.StartDate?.ToString("MMM yyyy") ?? "ADD VERIFIED DATES") — @(item.EndDate?.ToString("MMM yyyy") ?? "Present")</span><h3>@item.Title</h3><p>@item.Subtitle</p><p class="preserve">@item.Content</p></article> }</div></section>
+    }
+    else if (block.Key == "contact")
+    {
+        <section class="wrap section contact-cta" id="contact"><p class="eyebrow">05 / WHAT’S NEXT?</p><h2>@block.Title</h2><p>@block.Content</p><a class="button primary" href="@block.Configuration.ButtonUrl">@block.Configuration.ButtonLabel ↗</a></section>
+    }
+    else if (block.Key == "social")
+    {
+        <section class="wrap social-links"><span class="eyebrow">@block.Title</span>@foreach (var setting in Model.Content.Where(x => x.Kind == "settings" && !string.IsNullOrEmpty(x.Url))) { <a href="@setting.Url" rel="noopener noreferrer">Professional profile ↗</a> }</section>
+    }
+}
+

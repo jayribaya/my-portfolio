@@ -1,0 +1,3 @@
+@model LoginForm
+@{ ViewData["Title"] = "Admin sign-in"; }
+<section class="wrap section login"><p class="eyebrow">PORTFOLIO STUDIO</p><h1>Welcome back<span class="blue">.</span></h1><p>Sign in to manage your work and your story.</p><form method="post" action="/admin/login" class="panel form-stack">@Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation" role="alert"></div><label asp-for="Email"></label><input asp-for="Email" autocomplete="username" /><label asp-for="Password"></label><input asp-for="Password" type="password" autocomplete="current-password" /><button class="button primary">Sign in →</button></form><p class="muted">Private access. Accounts are created through the secure setup command.</p></section>

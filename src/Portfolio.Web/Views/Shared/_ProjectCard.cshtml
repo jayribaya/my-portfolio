@@ -1,0 +1,8 @@
+@model CaseStudyModel
+@{ var cover = Model.Media.FirstOrDefault(x => x.Id == Model.Project.CoverImageId); }
+<article class="project-card">
+    <a class="project-art" href="/projects/@Model.Project.Slug" tabindex="-1" aria-hidden="true">
+        @if (cover != null) { <img src="@cover.Url" alt="@cover.AltText" loading="lazy" width="600" height="360" /> }
+        else { <div class="schematic"><div class="schematic-bar"><i></i><i></i><i></i><span>CONCEPT / @Model.Project.Technologies.FirstOrDefault()</span></div><div class="schematic-body"><div class="mini-sidebar"></div><div class="mini-dashboard"><div class="mini-line"></div><div class="mini-stats"><i></i><i></i><i></i></div><div class="mini-chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div><span class="concept-label">ILLUSTRATIVE CASE STUDY · NO SCREENSHOT</span></div> }
+    </a><div class="card-body"><div class="card-top"><p class="eyebrow">@Model.Project.ProjectStatus</p><span class="blue" aria-hidden="true">↗</span></div><h3><a href="/projects/@Model.Project.Slug">@Model.Project.Title</a></h3><p>@Model.Project.Summary</p><div class="badges">@foreach (var technology in Model.Project.Technologies.Take(5)) { <span>@technology</span> }</div></div>
+</article>

@@ -1,0 +1,1 @@
+{"private":true,"scripts":{"build":"tsc && tailwindcss -i ./Styles/site.css -o ./wwwroot/css/site.css --minify","check":"tsc --noEmit"},"devDependencies":{"@tailwindcss/cli":"4.3.3","tailwindcss":"4.3.3","typescript":"7.0.2","@types/sortablejs":"1.15.9"},"dependencies":{"sortablejs":"1.15.7"}}
