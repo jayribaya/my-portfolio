@@ -4,7 +4,7 @@ using Portfolio.Infrastructure;
 namespace Portfolio.Tests;
 public sealed class DomainTests
 {
-    private static readonly CancellationToken Ct = CancellationToken.None;
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
     [Theory][InlineData("Héllo, World!", "hello-world")][InlineData("  C# + .NET  ", "c-net")][InlineData("!!!", "project")]
     public void Slugs_are_safe(string title, string expected) => Assert.Equal(expected, PortfolioService.Slug(title));
     [Fact] public void Canonical_order_keeps_existing_and_appends_new() => Assert.Equal(new[] { "b", "a", "c" }, PortfolioService.Canonical(["b", "gone", "a", "a"], ["a", "b", "c"]));
@@ -36,7 +36,7 @@ public sealed class DomainTests
     {
         var store = new MemoryPortfolioStore(); await SeedData.Seed(store, Ct); var service = new PortfolioService(store); var order = await service.GetOrder("projects", Ct);
         var results = await Task.WhenAll(Enumerable.Range(0, 5).Select(async _ => { try { await service.Reorder("projects", new(order.Ids, 0), "test", Ct); return true; } catch (ConflictException) { return false; } }));
-        Assert.Single(results.Where(x => x));
+        Assert.Single(results, x => x);
     }
     [Fact] public async Task Slug_collisions_and_stale_edits_are_handled()
     {

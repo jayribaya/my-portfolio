@@ -66,6 +66,14 @@ public class ContentItem : Entity
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public SectionConfiguration Configuration { get; set; } = new();
+    public SiteBranding Branding { get; set; } = new();
+}
+public sealed class SiteBranding
+{
+    [StringLength(40)] public string ShortName { get; set; } = "JAY CARLO";
+    [StringLength(80)] public string Tagline { get; set; } = "Thoughtfully designed. Carefully engineered.";
+    public string? GitHubUrl { get; set; }
+    public string? LinkedInUrl { get; set; }
 }
 public sealed class SectionConfiguration
 {

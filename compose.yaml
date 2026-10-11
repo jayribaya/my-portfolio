@@ -1,0 +1,31 @@
+# LOCAL DEVELOPMENT ONLY. Production uses authenticated Atlas and HTTPS.
+services:
+  mongo:
+    image: mongo:8.0
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Mongo__ConnectionString: ${Mongo__ConnectionString:-mongodb://mongo:27017}
+      Mongo__Database: ${Mongo__Database:-jay_portfolio}
+      AllowedHosts: localhost
+      DataProtection__KeyPath: /app/App_Data/keys
+    ports:
+      - "127.0.0.1:5080:8080"
+    volumes:
+      - web-keys:/app/App_Data/keys
+    depends_on:
+      mongo:
+        condition: service_healthy
+volumes:
+  mongo-data:
+  web-keys:

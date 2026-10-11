@@ -56,7 +56,7 @@ public sealed partial class PortfolioService(IPortfolioStore store)
     };
     public async Task<OrderDocument> Reorder(string scope, ReorderRequest request, string actor, CancellationToken ct)
     {
-        if (request.Ids == null || request.Ids.Count > 5000 || request.Ids.Count != request.Ids.Distinct().Count())
+        if (request.Version < 0 || request.Ids == null || request.Ids.Count > 5000 || request.Ids.Count != request.Ids.Distinct().Count())
             throw new InputException("Ordering contains duplicate IDs or exceeds the limit.");
         var eligible = await Eligible(scope, ct);
         if (!eligible.ToHashSet().SetEquals(request.Ids)) throw new InputException("Send all eligible IDs for this scope. Refresh the unfiltered list before reordering.");
@@ -67,6 +67,7 @@ public sealed partial class PortfolioService(IPortfolioStore store)
     public async Task SaveProject(Project project, string actor, CancellationToken ct)
     {
         Validate(project);
+        if (project.StartDate > project.EndDate) throw new InputException("End date cannot be before start date.");
         if (!Enum.IsDefined(project.Visibility) || !Enum.IsDefined(project.ProjectStatus)) throw new InputException("Invalid status.");
         foreach (var url in new[] { project.GitHubUrl, project.DemoUrl, project.CaseStudyUrl })
             if (!SafeUrl(url)) throw new InputException("External links must use HTTPS without embedded credentials.");
@@ -106,9 +107,11 @@ public sealed partial class PortfolioService(IPortfolioStore store)
     }
     public async Task SaveContent(ContentItem item, string actor, CancellationToken ct)
     {
-        Validate(item); Validate(item.Configuration);
+        Validate(item); Validate(item.Configuration); Validate(item.Branding);
+        if (item.StartDate > item.EndDate) throw new InputException("End date cannot be before start date.");
         if (!ContentKinds.Contains(item.Kind)) throw new InputException("Unknown content module.");
         if (!SafeUrl(item.Url) || !SafeUrl(item.Configuration.ButtonUrl, true)) throw new InputException("Use valid HTTPS links or a local button path.");
+        if (!SafeUrl(item.Branding.GitHubUrl) || !SafeUrl(item.Branding.LinkedInUrl)) throw new InputException("Social links must use HTTPS.");
         if (item.Kind == "sections" && !SectionKeys.Contains(item.Key)) throw new InputException("Choose a supported section key.");
         var list = await store.Content(item.Kind, ct);
         if ((item.Kind is "settings" or "resume" || item.Kind == "sections") && list.Any(x => x.Id != item.Id && (item.Kind != "sections" || x.Key == item.Key))) throw new InputException("This singleton already exists. Edit its existing record.");

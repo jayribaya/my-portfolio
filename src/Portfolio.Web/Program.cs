@@ -14,7 +14,7 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 var demo = builder.Configuration.GetValue<bool>("DemoMode");
 if (demo && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing")) throw new InvalidOperationException("DemoMode is forbidden outside Development/Testing.");
-builder.Host.UseSerilog((_, logger) => logger.WriteTo.Console().MinimumLevel.Information());
+builder.Host.UseSerilog((_, logger) => logger.WriteTo.Console().MinimumLevel.Information().MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning));
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 builder.Services.AddSingleton<IPasswordHasher<AdminUser>, PasswordHasher<AdminUser>>();
@@ -64,7 +64,7 @@ using (var scope = app.Services.CreateScope())
     var store = scope.ServiceProvider.GetRequiredService<IPortfolioStore>();
     await store.Initialize(CancellationToken.None);
     if (demo || args.Contains("--seed")) await SeedData.Seed(store, CancellationToken.None);
-    if (args.Contains("--create-admin"))
+    if (args.Contains("--create-admin") || (demo && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORTFOLIO_ADMIN_EMAIL"))))
     {
         var email = Environment.GetEnvironmentVariable("PORTFOLIO_ADMIN_EMAIL")?.Trim().ToLowerInvariant() ?? "";
         var password = Environment.GetEnvironmentVariable("PORTFOLIO_ADMIN_PASSWORD") ?? "";
@@ -79,6 +79,7 @@ using (var scope = app.Services.CreateScope())
 }
 app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")) { app.UseHsts(); app.UseHttpsRedirection(); }
+app.UseExceptionHandler("/error/500");
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -96,11 +97,13 @@ app.Use(async (context, next) =>
     catch (Exception ex) when (!context.Response.HasStarted)
     {
         Log.Error(ex, "Request failed at {Path}", context.Request.Path);
+        if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) throw;
         context.Response.StatusCode = 500;
         await context.Response.WriteAsJsonAsync(new ProblemDetails { Status = 500, Title = "Something went wrong", Detail = "Try again later. The error has been logged." });
     }
 });
+app.UseWhen(context => HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method), branch => branch.UseStatusCodePagesWithReExecute("/error/{0}"));
 app.UseStaticFiles(); app.UseRouting(); app.UseRateLimiter(); app.UseAuthentication(); app.UseAuthorization();
-app.UseStatusCodePagesWithReExecute("/error/{0}");
+
 app.MapHealthChecks("/health"); app.MapControllers(); app.Run();
 public partial class Program;

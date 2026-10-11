@@ -1,0 +1,35 @@
+name: Build and verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:8.0
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/Portfolio.Web/package-lock.json
+      - run: npm ci --prefix src/Portfolio.Web
+      - run: npm run check --prefix src/Portfolio.Web
+      - run: npm run build --prefix src/Portfolio.Web
+      - run: dotnet restore Portfolio.slnx
+      - run: dotnet build Portfolio.slnx -c Release --no-restore
+      - run: dotnet test --solution Portfolio.slnx -c Release --no-build --no-restore
+        env:
+          PORTFOLIO_TEST_MONGO: mongodb://localhost:27017
+      - run: docker build -t portfolio:ci .

@@ -32,7 +32,6 @@
     }
     else if (block.Key == "social")
     {
-        <section class="wrap social-links"><span class="eyebrow">@block.Title</span>@foreach (var setting in Model.Content.Where(x => x.Kind == "settings" && !string.IsNullOrEmpty(x.Url))) { <a href="@setting.Url" rel="noopener noreferrer">Professional profile ↗</a> }</section>
+        <section class="wrap social-links"><span class="eyebrow">@block.Title</span>@if (!string.IsNullOrEmpty(Model.Settings?.Branding.GitHubUrl)) { <a href="@Model.Settings.Branding.GitHubUrl" rel="noopener noreferrer">GitHub ↗</a> }@if (!string.IsNullOrEmpty(Model.Settings?.Branding.LinkedInUrl)) { <a href="@Model.Settings.Branding.LinkedInUrl" rel="noopener noreferrer">LinkedIn ↗</a> }@foreach (var setting in Model.Content.Where(x => x.Kind == "settings" && !string.IsNullOrEmpty(x.Url))) { <a href="@setting.Url" rel="noopener noreferrer">Professional profile ↗</a> }</section>
     }
 }
-

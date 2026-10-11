@@ -14,6 +14,7 @@ public sealed class PublicModel
 public record CaseStudyModel(Project Project, List<MediaAsset> Media, bool Preview);
 public record ProjectListModel(List<Project> Projects, OrderDocument GlobalOrder, OrderDocument FeaturedOrder, List<ContentItem> Categories, int Page, int Total, bool Filtered);
 public record ContentListModel(string Kind, List<ContentItem> Items, OrderDocument? Order);
+public record OrderingModel(OrderDocument Order, Dictionary<string,string> Titles);
 public record DashboardModel(List<Project> Projects, List<AuditEvent> Audit, int Unread);
 public sealed class LoginForm
 {

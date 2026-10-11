@@ -9,6 +9,13 @@ namespace Portfolio.Web.Controllers;
 public sealed class AdminController(IPortfolioStore store, PortfolioService service) : Controller
 {
     private string Actor => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+    [HttpGet("/admin/order/{scope}")]
+    public async Task<IActionResult> Ordering(string scope, CancellationToken ct)
+    {
+        var order = await service.GetOrder(scope, ct);
+        var titles = scope == "sections" ? (await store.Content("sections", ct)).ToDictionary(x => x.Id, x => x.Title) : (await store.Projects(ct)).ToDictionary(x => x.Id, x => x.Title);
+        return View(new OrderingModel(order, titles));
+    }
     [HttpGet("/admin")] public async Task<IActionResult> Dashboard(CancellationToken ct) => View(new DashboardModel(await store.Projects(ct), await store.Audit(ct), (await store.Contacts(ct)).Count(x => !x.IsRead)));
     [HttpGet("/admin/projects")] public async Task<IActionResult> Projects(string? q, string? visibility, string? category, int page = 1, CancellationToken ct = default)
     {
@@ -19,6 +26,21 @@ public sealed class AdminController(IPortfolioStore store, PortfolioService serv
         return View(new ProjectListModel(projects.Skip((page - 1) * 30).Take(30).ToList(), await service.GetOrder("projects", ct), await service.GetOrder("featured", ct), await store.Content("categories", ct), page, total, filtered || total > 30));
     }
     [HttpGet("/admin/projects/new")] public async Task<IActionResult> NewProject(CancellationToken ct) { await Options(ct); return View("EditProject", new Project()); }
+    [HttpPost("/admin/projects/bulk")]
+    public async Task<IActionResult> Bulk(string[] selected, string action, CancellationToken ct)
+    {
+        if (selected == null || selected.Length is < 1 or > 30 || selected.Distinct().Count() != selected.Length || !new[] { "publish", "unpublish", "archive", "delete", "restore" }.Contains(action)) throw new InputException("Select 1–30 distinct projects and a valid action.");
+        var entries = new List<(string Id, long Version)>();
+        foreach (var entry in selected) { var parts = entry.Split(':'); if (parts.Length != 2 || !long.TryParse(parts[1], out var version) || version < 1) throw new InputException("Invalid selection. Refresh the list."); entries.Add((parts[0], version)); }
+        var completed = 0; var errors = new List<string>();
+        // Each record is version-checked independently. Report partial successes explicitly.
+        foreach (var entry in entries)
+        {
+            try { await service.ChangeVisibility(entry.Id, action, entry.Version, Actor, ct); completed++; }
+            catch (Exception ex) when (ex is InputException or ConflictException) { errors.Add(ex.Message); }
+        }
+        TempData["Message"] = $"{completed} project(s) updated." + (errors.Count > 0 ? $" {errors.Count} skipped: " + string.Join(" ", errors.Distinct()) : ""); return Redirect("/admin/projects");
+    }
     [HttpGet("/admin/projects/{id}/edit")] public async Task<IActionResult> EditProject(string id, CancellationToken ct) { var project = await store.Project(id, ct); if (project == null) return NotFound(); await Options(ct); return View(project); }
     private async Task Options(CancellationToken ct) { ViewData["Media"] = await store.Media(ct); ViewData["Categories"] = await store.Content("categories", ct); ViewData["Technologies"] = await store.Content("technologies", ct); }
     [HttpPost("/admin/projects/save")]
@@ -32,11 +54,16 @@ public sealed class AdminController(IPortfolioStore store, PortfolioService serv
     [HttpGet("/admin/projects/{id}/preview")]
     public async Task<IActionResult> Preview(string id, CancellationToken ct) { var project = await store.Project(id, ct); return project == null ? NotFound() : View("~/Views/Public/Project.cshtml", new CaseStudyModel(project, await store.Media(ct), true)); }
     [HttpPost("/admin/api/projects/reorder")]
-    public async Task<IActionResult> Reorder([FromBody] ReorderRequest request, CancellationToken ct) => Ok(await service.Reorder("projects", request, Actor, ct));
+    public async Task<IActionResult> Reorder([FromBody] ReorderRequest? request, CancellationToken ct) => await SaveOrder("projects", request, ct);
     [HttpPost("/admin/api/featured/reorder")]
-    public async Task<IActionResult> Featured([FromBody] ReorderRequest request, CancellationToken ct) => Ok(await service.Reorder("featured", request, Actor, ct));
+    public async Task<IActionResult> Featured([FromBody] ReorderRequest? request, CancellationToken ct) => await SaveOrder("featured", request, ct);
     [HttpPost("/admin/api/sections/reorder")]
-    public async Task<IActionResult> Sections([FromBody] ReorderRequest request, CancellationToken ct) => Ok(await service.Reorder("sections", request, Actor, ct));
+    public async Task<IActionResult> Sections([FromBody] ReorderRequest? request, CancellationToken ct) => await SaveOrder("sections", request, ct);
+    private async Task<IActionResult> SaveOrder(string scope, ReorderRequest? request, CancellationToken ct)
+    {
+        if (!ModelState.IsValid || request == null) return BadRequest(new ProblemDetails { Status = 400, Title = "Invalid ordering request", Detail = "Send an ordered IDs array and an integer version." });
+        return Ok(await service.Reorder(scope, request, Actor, ct));
+    }
     [HttpGet("/admin/content/{kind}")]
     public async Task<IActionResult> ContentList(string kind, CancellationToken ct) { if (!PortfolioService.ContentKinds.Contains(kind)) return NotFound(); return View("Content", new ContentListModel(kind, await store.Content(kind, ct), kind == "sections" ? await service.GetOrder("sections", ct) : null)); }
     [HttpGet("/admin/content/{kind}/new")]
